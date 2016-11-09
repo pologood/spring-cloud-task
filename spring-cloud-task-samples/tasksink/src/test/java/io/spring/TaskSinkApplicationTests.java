@@ -19,7 +19,6 @@ package io.spring;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.spring.configuration.TaskSinkConfiguration;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -60,8 +59,7 @@ public class TaskSinkApplicationTests {
 
 		Map<String, String> properties = new HashMap();
 		properties.put("server.port", "0");
-		TaskLaunchRequest request = new TaskLaunchRequest("maven://org.springframework.cloud.task.app:"
-				+ "timestamp-task:jar:1.0.0.BUILD-SNAPSHOT", null, properties, null);
+		TaskLaunchRequest request = new TaskLaunchRequest("maven://io.spring.cloud:timestamp-task:jar:1.0.3.RELEASE", null, properties, null);
 		GenericMessage<TaskLaunchRequest> message = new GenericMessage<TaskLaunchRequest>(request);
 		this.sink.input().send(message);
 		assertEquals(LaunchState.complete, testTaskLauncher.status("TESTSTATUS").getState());

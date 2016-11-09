@@ -15,10 +15,14 @@
  */
 package io.spring;
 
+import java.io.FileOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import javax.sql.DataSource;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.StepContribution;
@@ -53,17 +57,17 @@ import org.springframework.core.io.Resource;
 /**
  * @author Michael Minella
  */
+@Slf4j
 @Configuration
 public class JobConfiguration {
+
+	public static final SimpleDateFormat sdf = new SimpleDateFormat("YYYYMMddHHmmss");
 
 	@Autowired
 	public JobBuilderFactory jobBuilderFactory;
 
 	@Autowired
 	public StepBuilderFactory stepBuilderFactory;
-
-	@Autowired
-	public DataSource dataSource;
 
 	@Autowired
 	public JobRepository jobRepository;
@@ -79,17 +83,21 @@ public class JobConfiguration {
 
 	private static final int GRID_SIZE = 4;
 
+	// TODO: will be loaded in worker profile
 	@Bean
-	public JobExplorerFactoryBean jobExplorer() {
+	public JobExplorerFactoryBean jobExplorer(DataSource source) {
+		log.info("{}", new Object(){}.getClass().getEnclosingMethod());
+
 		JobExplorerFactoryBean jobExplorerFactoryBean = new JobExplorerFactoryBean();
 
-		jobExplorerFactoryBean.setDataSource(this.dataSource);
+		jobExplorerFactoryBean.setDataSource(source);
 
 		return jobExplorerFactoryBean;
 	}
 
 	@Bean
 	public TaskLauncher taskLauncher() {
+		log.info("{}", new Object(){}.getClass().getEnclosingMethod());
 		LocalDeployerProperties localDeployerProperties = new LocalDeployerProperties();
 
 		localDeployerProperties.setDeleteFilesOnExit(false);
@@ -99,6 +107,7 @@ public class JobConfiguration {
 
 	@Bean
 	public PartitionHandler partitionHandler(TaskLauncher taskLauncher, JobExplorer jobExplorer) throws Exception {
+		log.info("{}", new Object(){}.getClass().getEnclosingMethod());
 		Resource resource = resourceLoader.getResource("maven://io.spring.cloud:partitioned-batch-job:1.0.3.RELEASE");
 
 		DeployerPartitionHandler partitionHandler = new DeployerPartitionHandler(taskLauncher, jobExplorer, resource, "workerStep");
@@ -117,6 +126,7 @@ public class JobConfiguration {
 
 	@Bean
 	public Partitioner partitioner() {
+		log.info("{}", new Object(){}.getClass().getEnclosingMethod());
 		return new Partitioner() {
 			@Override
 			public Map<String, ExecutionContext> partition(int gridSize) {
@@ -135,22 +145,30 @@ public class JobConfiguration {
 		};
 	}
 
+	// TODO: will be loaded in worker profile
 	@Bean
 	@Profile("worker")
 	public DeployerStepExecutionHandler stepExecutionHandler(JobExplorer jobExplorer) {
+		log.info("{}", new Object(){}.getClass().getEnclosingMethod());
 		return new DeployerStepExecutionHandler(this.context, jobExplorer, this.jobRepository);
 	}
 
+	// TODO: @Value should be different in different profiles.
 	@Bean
 	@StepScope
 	public Tasklet workerTasklet(
 			final @Value("#{stepExecutionContext['partitionNumber']}")Integer partitionNumber) {
 
+		log.info("{}", new Object(){}.getClass().getEnclosingMethod());
 		return new Tasklet() {
 			@Override
 			public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
 				System.out.println("This tasklet ran partition: " + partitionNumber);
-
+				FileOutputStream fos = new FileOutputStream("d:\\" + partitionNumber + "_" + sdf.format(new Date()) + ".txt",
+					false);
+				fos.write(("This tasklet ran partition: " + partitionNumber).getBytes());
+				fos.flush();
+				fos.close();
 				return RepeatStatus.FINISHED;
 			}
 		};
@@ -158,6 +176,7 @@ public class JobConfiguration {
 
 	@Bean
 	public Step step1(PartitionHandler partitionHandler) throws Exception {
+		log.info("{}", new Object(){}.getClass().getEnclosingMethod());
 		return stepBuilderFactory.get("step1")
 				.partitioner(workerStep().getName(), partitioner())
 				.step(workerStep())
@@ -167,14 +186,17 @@ public class JobConfiguration {
 
 	@Bean
 	public Step workerStep() {
+		log.info("{}", new Object(){}.getClass().getEnclosingMethod());
 		return stepBuilderFactory.get("workerStep")
 				.tasklet(workerTasklet(null))
 				.build();
 	}
 
+	// TODO: will only be valid in master profile
 	@Bean
 	@Profile("master")
 	public Job partitionedJob(PartitionHandler partitionHandler) throws Exception {
+		log.info("{}", new Object(){}.getClass().getEnclosingMethod());
 		return jobBuilderFactory.get("partitionedJob")
 				.start(step1(partitionHandler))
 				.build();

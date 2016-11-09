@@ -226,10 +226,10 @@ public class DeployerPartitionHandler implements PartitionHandler, EnvironmentAw
 		ExecutionContext copyContext = new ExecutionContext(workerStepExecution.getExecutionContext());
 
 		AppDefinition definition =
-				new AppDefinition(String.format("%s:%s:%s",
-						taskExecution.getTaskName(),
-						workerStepExecution.getJobExecution().getJobInstance().getJobName(),
-						workerStepExecution.getStepName()),
+				new AppDefinition(String.format("%s.%s.%s",
+						taskExecution.getTaskName().replaceAll(":", "."),
+						workerStepExecution.getJobExecution().getJobInstance().getJobName().replaceAll(":", "."),
+						workerStepExecution.getStepName().replaceAll(":", ".")),
 						this.environmentVariablesProvider.getEnvironmentVariables(copyContext));
 
 		AppDeploymentRequest request =

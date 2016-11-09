@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.spring.configuration;
+package io.spring;
 
 import org.springframework.cloud.deployer.spi.core.AppDeploymentRequest;
 import org.springframework.cloud.deployer.spi.task.LaunchState;
